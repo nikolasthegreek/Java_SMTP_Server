@@ -24,6 +24,22 @@ public class Server {
         Encryption.GenerateKeys();
         Encryption.InitDecrypCipher();
         Accounts.AccountsINIT();
+        //remove comment to generate test data
+        //dont about running twice they wont double
+        //these are kept here painly to be a refrence for testing login credentials
+        /*
+        Accounts.CreateAccount("guy@gmail.com", "dude");
+        Accounts.CreateAccount("nick@yahoo.name", "ggwp");
+        Accounts.CreateAccount("phil@yahoo.name", "ggwp");
+        Accounts.CreateAccount("bro@mc-class.com", "OMG");
+        Accounts.CreateAccount("nick@gmail.com", "ggwp");
+        Accounts.SaveData();
+        */
+
+
+
+
+
         try {
             listener = new ServerSocket(Port);
         } catch (IOException e) {

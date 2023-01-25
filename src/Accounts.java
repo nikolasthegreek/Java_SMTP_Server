@@ -1,13 +1,19 @@
 import java.io.File;
+import java.io.FileWriter;
+import java.util.LinkedList;
+import java.util.Scanner;
 
 public class Accounts {
-    private static Account[] accounts;//an array of all loged acounts
-    private boolean Wait= false;
+    private static LinkedList<Account> _accounts;//a list of all loged acounts
+    private static File DB;
 
     public static void AccountsINIT(){
+        _accounts= new LinkedList<Account>();
         InitFiles();
+        DB = new File(".\\Accounts\\AccountsDB.txt");
+        LoadAccounts();
     }
-
+    
     private static void InitFiles(){
         try{
             File Dir = new File(".\\Accounts");
@@ -27,55 +33,75 @@ public class Accounts {
         }
     }
 
-    private static void SaveData(){
+    //Accounts are saved across many lines in the txt file
+    //Email
+    //Hashedpasword
+    //HexSalt
+
+    private static void LoadAccounts(){
+        Account Data;
+        try{
+            Data = new Account();
+            Scanner Reader = new Scanner(DB);
+            while (Reader.hasNextLine()) {
+                Data =new Account();
+                Data.Email=Reader.nextLine();//            loads Email
+                Data.HashedPasword=Reader.nextLine();//    loads hashed password
+                Data.HexSalt=Reader.nextLine();//          loads HexSalt
+                _accounts.add(Data);//                     Saves Data
+            }
+            Reader.close();
+        }catch(Exception e){
+            System.err.println("&failed to load data: "+e);
+        }
+        
 
     }
-    
-    public static int GenerateID(){//is used in the creation of an account
-        int count= 0;
-        for (Account account : accounts) {
-            if(account==null){
-                //accounts are kept and loaded in order of ID in an array
-                //if thre is a null this means there is an open slot for an ID
-                return count+1;  
+
+    public static void SaveData(){
+        String Data = new String();
+        Account Acc;
+        try{
+            FileWriter Writer = new FileWriter(".\\Accounts\\AccountsDB.txt");
+            for (int i = 0; i < _accounts.size(); i++) {
+                Acc=_accounts.get(i);
+                Data= Data+Acc.Email+"\n";//        loads email
+                Data= Data+Acc.HashedPasword+"\n";//loads hashed password
+                Data= Data+Acc.HexSalt+"\n";//      loads salt
             }
-            count++;
-        }// if no slot was found then it is apended in the end
-        return count;
-        
+            Writer.write(Data);
+            Writer.close();
+        }catch(Exception e){
+            System.err.println("&failed to save accounts: "+e);
+        }
     }
     
-    public static int FindUser (Email LookFor){
-        for (Account account : accounts) {
-            if(        account.User.Domain    ==LookFor.Domain){
-                if(    account.User.MailServer==LookFor.MailServer){
-                    if(account.User.UserName  ==LookFor.UserName){
-                        return account.ID;
-                    }
-                }
+    private static Account FindUser (String _email){
+        for (int i = 0; i < _accounts.size(); i++) {
+            if(_accounts.get(i).Email.equals(_email)){
+                return _accounts.get(i);
             }
         }
-        return -1;// -1 means it failed to find an account
+        return null;// null means it failed to find an account
     }
 
-}
-class Email{
-    //  UserName@MailServer.Domain
-    public String UserName;
-    public String MailServer;
-    public String Domain;
+    public static boolean CreateAccount(String email, String Password){
+        if(FindUser(email)!=null){return false;}//this returns false to denote the account exists
+        _accounts.add(new Account(email,Password));//loads new account(will get saved in the DB later unless interupted)
+        return true;//succesfully saved(still voletile)
+    }
 }
 class Account{
-    public Email User;
-    public int ID;
-    private String HashedPasword;//saves the pasword in hashed form for safty against leaks
-    private String HexSalt;//the salt is saved to be able to perform the same hash to check 
+    public String Email;
+    public String HashedPasword;//saves the pasword in hashed form for safty against leaks
+    public String HexSalt;//the salt is saved to be able to perform the same hash to check 
 
-    Account(Email _user,String Password){//saves user info hashed
-        User = _user;
+    Account(){}// default constructor for when loading from DB
+
+    Account(String email,String Password){//saves user info hashed
+        Email = email;
         HexSalt = Encryption.GenerateSaltHex();
         HashedPasword = Encryption.Hash(HexSalt,Password);
-        ID = Accounts.GenerateID();
     }
 
     public boolean CheckPassword(String Password){
