@@ -21,15 +21,15 @@ public class Accounts {
                 System.out.println("~Accounts folder created");
             }
         }catch(Exception  e){
-            System.err.println("&failed to create directory beacuse : "+e);
+            System.err.println("&failed to create Accounts directory beacuse : "+e);
         }
         try{
             File Acc = new File(".\\Accounts\\AccountsDB.txt");
             if(Acc.createNewFile()){
                 System.out.println("~Accounts file created");
             }
-        }catch(Exception  e){
-            System.err.println("&failed to create file beacuse : "+e);
+        }catch(Exception e){
+            System.err.println("&failed to create file Accounts beacuse : "+e);
         }
     }
 

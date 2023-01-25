@@ -1,12 +1,9 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
 
-public class ConnectionThread extends Thread {
+public class ServerInterfaceThread extends Thread {
     public boolean KillMe= false; //flag for thread to be terminated
 
     private Socket socket;
@@ -15,16 +12,15 @@ public class ConnectionThread extends Thread {
     private Encryption ServerEncyption;
     private String MessageIN;
     private String MessageOUT;
+    private ClientCommunicationThread CCT;
+    public boolean MessageFlag=false;// true = dont send yet false = good to send
+    private String INBOX;
 
-    private boolean ThreadActive=true;
     private int WrongMessageCounter=0;
     private int MessageCheckCounter=0;
     private int MessageChecksMax;
     private int AttemtCounter=0;
     private boolean AttemtReSend=false;
-
-    private int KeyExchangeStage=0;
-    private boolean KeysExchanged=false;
 
     //timeout setings check server
     private int TimeoutAttemts;
@@ -32,17 +28,20 @@ public class ConnectionThread extends Thread {
     private int TimeoutWrongLimit;
 
     public void run (){
-        System.out.println("~Thread started");
+        System.out.println("~SIT Thread started");
         FechConfig();
         ServerEncyption = new Encryption();
         ServerExchangeKeys();
-        
-        
+        //hands of direct communication to CCT Thread so this part of the script 
+        //can focuse on higher level actions
+        StartCCT();
+
+
         Exit();
-        System.out.println("~Thread stop");
+        System.out.println("~SIT Thread stop");
     }
 
-    public ConnectionThread(Socket _socket,BufferedReader _BufRead,BufferedWriter _BufWrite){
+    public ServerInterfaceThread(Socket _socket,BufferedReader _BufRead,BufferedWriter _BufWrite){
         // takes the conection
         socket=_socket;
         BR=_BufRead;
@@ -178,7 +177,6 @@ public class ConnectionThread extends Thread {
             System.err.println("&Message failed to be sent "+e);
         }
     }
-    
     private void MessageEncriptedSend(String Message){
         try{
             BW.write(ServerEncyption.Encript(Message));
@@ -188,7 +186,6 @@ public class ConnectionThread extends Thread {
             System.err.println("&Message failed to be sent "+e);
         }
     }
-    
     private String ReadEncrypted(){
         try{
             return Encryption.DeCrypt(BR.readLine());
@@ -199,6 +196,25 @@ public class ConnectionThread extends Thread {
         
     }
     
+    private void StartCCT(){
+        CCT = new ClientCommunicationThread();
+        CCT.CCTinit(socket, BR, BW, Thread.currentThread());
+        CCT.start();
+    }
+    public void MessageIN(String Message){
+        MessageFlag=true;
+        INBOX = Message;
+    }
+    private String ReadInbox(){
+        MessageFlag=false;
+        try{
+            return Encryption.DeCrypt(INBOX);
+        }catch(Exception e){
+            System.err.println("&Message failed to be sent "+e);
+            return null;
+        }
+    }
+
     private void TerminateConnection(){
         try{
             BW.close();
@@ -209,7 +225,6 @@ public class ConnectionThread extends Thread {
         }
         
     }
-
     private void Exit(){
         TerminateConnection();
         Server.ThreadFinished();

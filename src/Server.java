@@ -24,6 +24,27 @@ public class Server {
         Encryption.GenerateKeys();
         Encryption.InitDecrypCipher();
         Accounts.AccountsINIT();
+        Log.LOGSINIT();
+        Log ServerLog = new Log("Server");//starts servers log
+
+
+        ServerLog.WriteLog("Test123123");
+        ServerLog.WriteLog("zzzzzzz for 2");
+        try{
+            Thread.sleep(2000);
+        }catch(Exception e){
+
+        }
+        ServerLog.WriteLog("gday");
+        ServerLog.TerminateLog();
+        
+
+
+
+
+
+
+
         //remove comment to generate test data
         //dont about running twice they wont double
         //these are kept here painly to be a refrence for testing login credentials
@@ -35,12 +56,7 @@ public class Server {
         Accounts.CreateAccount("nick@gmail.com", "ggwp");
         Accounts.SaveData();
         */
-
-
-
-
-
-        try {
+        try{
             listener = new ServerSocket(Port);
         } catch (IOException e) {
             System.out.println(e);
@@ -61,7 +77,7 @@ public class Server {
         System.out.println("~Sever stopped!");
     }
 
-    static private ConnectionThread StartConnectionThread(Socket _socket){
+    static private ServerInterfaceThread StartConnectionThread(Socket _socket){
         if(ThreadCount==ThreadMax){//checks if the thread limit has been reached
             System.err.println("&Thread Limit Reached");
             return null;
@@ -70,7 +86,7 @@ public class Server {
             //sets up the connection to be handed off the the thread
             BufferedReader is=new BufferedReader(new InputStreamReader(_socket.getInputStream()));;
             BufferedWriter os=new BufferedWriter(new OutputStreamWriter(_socket.getOutputStream()));
-            ConnectionThread Conn = new ConnectionThread(_socket, is, os);
+            ServerInterfaceThread Conn = new ServerInterfaceThread(_socket, is, os);
             Conn.start();
             return Conn;
         }catch (Exception e) {
