@@ -52,17 +52,6 @@ public class Log {
         LogStr=LogStr+"<"+Time()+">:"+ToLog+"\n";
     }
 
-    public void LogSave(){
-        //saves the log so if it unexpectedly closes
-        //thus not all logs are lost
-        try{
-            WriteLog("SAVE");
-            Writer.write(LogStr);
-        }catch(Exception e){
-            System.err.println("&failed to save Log :"+e);
-        }
-    }
-
     public void TerminateLog(){
         try{
             WriteLog("LOG END");
@@ -94,7 +83,6 @@ public class Log {
     private void LogFileInit(String Name){//names the file 
         try{
             FileName = ".\\Logs\\"+Name+"_LOG"+Time()+".txt";
-            System.out.println("File:|"+FileName);
             _log= new File(FileName);
             if(_log.exists()){// in case other thread just started another log
                 FileName = ".\\Logs\\"+Name+"_LOG"+Time()+"_2.txt";

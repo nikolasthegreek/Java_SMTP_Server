@@ -4,17 +4,14 @@ import java.io.IOException;
 import java.net.Socket;
 
 public class ServerInterfaceThread extends Thread {
-    public boolean KillMe= false; //flag for thread to be terminated
-
+    private ClientConnectionService CCS;//the "dispacher"
+    private Log SITLog;
     private Socket socket;
     private BufferedReader BR;
     private BufferedWriter BW;
     private Encryption ServerEncyption;
     private String MessageIN;
     private String MessageOUT;
-    private ClientCommunicationThread CCT;
-    public boolean MessageFlag=false;// true = dont send yet false = good to send
-    private String INBOX;
 
     private int WrongMessageCounter=0;
     private int MessageCheckCounter=0;
@@ -28,24 +25,23 @@ public class ServerInterfaceThread extends Thread {
     private int TimeoutWrongLimit;
 
     public void run (){
-        System.out.println("~SIT Thread started");
+        SITLog=new Log("SIT");
         FechConfig();
         ServerEncyption = new Encryption();
+        SITLog.WriteLog("SIT INIT SUCCESSFUL");
         ServerExchangeKeys();
-        //hands of direct communication to CCT Thread so this part of the script 
-        //can focuse on higher level actions
-        StartCCT();
+        SITLog.WriteLog("HEY EXCHANGE SUCCESFUL");
 
 
         Exit();
-        System.out.println("~SIT Thread stop");
     }
 
-    public ServerInterfaceThread(Socket _socket,BufferedReader _BufRead,BufferedWriter _BufWrite){
+    public ServerInterfaceThread(Socket _socket,BufferedReader _BufRead,BufferedWriter _BufWrite ,ClientConnectionService _ccs){
         // takes the conection
         socket=_socket;
         BR=_BufRead;
         BW=_BufWrite;
+        CCS=_ccs;
     }
     
     private void FechConfig(){//copies setings from server, this is done so all the server setings are in one spot
@@ -70,7 +66,7 @@ public class ServerInterfaceThread extends Thread {
                 if(AttemtCounter>TimeoutAttemts){
                     TerminateConnection();
                     System.out.println("&connection timmed out");
-                    
+                    SITLog.WriteLog("TIMEOUT");
                 }
             }
             //now it checks if the message that came in was "HELLO" to start the key exchange
@@ -80,6 +76,7 @@ public class ServerInterfaceThread extends Thread {
                 if(WrongMessageCounter>TimeoutWrongLimit){
                     TerminateConnection();
                     System.err.println("&connection timmed out");
+                    SITLog.WriteLog("TIMEOUT");
                 }
                 while(WaitForMessage()){
                     AttemtCounter++;
@@ -87,6 +84,7 @@ public class ServerInterfaceThread extends Thread {
                     if(AttemtCounter>TimeoutAttemts){
                         System.err.println("&connection timmed out invalid communication");
                         TerminateConnection();
+                        SITLog.WriteLog("TIMEOUT or INVALID");
                     }
                     AttemtCounter=0;
                 }
@@ -100,6 +98,7 @@ public class ServerInterfaceThread extends Thread {
                 if(AttemtCounter>TimeoutAttemts){
                     TerminateConnection();
                     System.out.println("&connection timmed out");
+                    SITLog.WriteLog("TIMEOUT");
                 }
             }
             AttemtCounter=0;
@@ -115,6 +114,7 @@ public class ServerInterfaceThread extends Thread {
                 if(AttemtCounter>TimeoutAttemts){
                     TerminateConnection();
                     System.out.println("&connection timmed out");
+                    SITLog.WriteLog("TIMEOUT");
                 }
             }
             AttemtCounter=0;
@@ -125,6 +125,7 @@ public class ServerInterfaceThread extends Thread {
                 if(WrongMessageCounter>TimeoutWrongLimit){
                     TerminateConnection();
                     System.err.println("&connection timmed out");
+                    SITLog.WriteLog("TIMEOUT");
                 }
                 while(WaitForMessage()){
                     AttemtCounter++;
@@ -132,6 +133,7 @@ public class ServerInterfaceThread extends Thread {
                     if(AttemtCounter>TimeoutAttemts){
                         System.err.println("&connection timmed out invalid communication");
                         TerminateConnection();
+                        SITLog.WriteLog("TIMEOUT or INVALID");
                     }
                 }
                 AttemtCounter=0;
@@ -143,6 +145,7 @@ public class ServerInterfaceThread extends Thread {
             //keys have been exchanged
         }catch(Exception e){
             System.err.println("&failed key exchange :"+e);
+            SITLog.WriteLog("FAILED KEY EXCHANGE: "+e);
         }
     }
 
@@ -195,31 +198,13 @@ public class ServerInterfaceThread extends Thread {
         }
         
     }
-    
-    private void StartCCT(){
-        CCT = new ClientCommunicationThread();
-        CCT.CCTinit(socket, BR, BW, Thread.currentThread());
-        CCT.start();
-    }
-    public void MessageIN(String Message){
-        MessageFlag=true;
-        INBOX = Message;
-    }
-    private String ReadInbox(){
-        MessageFlag=false;
-        try{
-            return Encryption.DeCrypt(INBOX);
-        }catch(Exception e){
-            System.err.println("&Message failed to be sent "+e);
-            return null;
-        }
-    }
 
     private void TerminateConnection(){
         try{
             BW.close();
             BR.close();
             socket.close();
+            SITLog.WriteLog("TERMINATION OF CONNECTION SUCCESSFUL");
         }catch(IOException e){
             System.err.println("&failed to terminate connection"+e);
         }
@@ -227,6 +212,12 @@ public class ServerInterfaceThread extends Thread {
     }
     private void Exit(){
         TerminateConnection();
-        Server.ThreadFinished();
+        CCS.ThreadFinished();
+        SITLog.WriteLog("EXIT SUCCESSFUL");
+        SITLog.TerminateLog();
+    }
+    public void TerminateThread(){
+        SITLog.WriteLog("COMMAND FROM ABOUT TO TERMINATE");
+        Exit();
     }
 }
