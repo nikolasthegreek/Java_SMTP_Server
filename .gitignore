@@ -3,3 +3,14 @@ bin/Accounts.class
 bin/Email.class
 bin/Server.class
 Accounts/AccountsDB.txt
+Logs/Server_LOG2023_01_25_05_55_04.txt
+bin/Accounts.class
+bin/ClientCommunicationThread.class
+bin/ConnectionThread.class
+bin/Log.class
+bin/Server.class
+bin/ServerInterfaceThread.class
+bin/Accounts.class
+bin/ClientConnectionService.class
+bin/ConnectionThread.class
+bin/Server.class

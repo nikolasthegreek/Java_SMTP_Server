@@ -76,7 +76,7 @@ public class Accounts {
         }
     }
     
-    private static Account FindUser (String _email){
+    public static Account FindUser (String _email){
         for (int i = 0; i < _accounts.size(); i++) {
             if(_accounts.get(i).Email.equals(_email)){
                 return _accounts.get(i);
@@ -89,6 +89,12 @@ public class Accounts {
         if(FindUser(email)!=null){return false;}//this returns false to denote the account exists
         _accounts.add(new Account(email,Password));//loads new account(will get saved in the DB later unless interupted)
         return true;//succesfully saved(still voletile)
+    }
+
+    public static void WipeData(){
+        for (int i = 0; i < _accounts.size(); i++) {
+            _accounts.remove();
+        }
     }
 }
 class Account{

@@ -1,4 +1,5 @@
 import java.util.Scanner;
+
 public class Server {
 
     //Server config
@@ -9,6 +10,8 @@ public class Server {
     static public int TimeoutWrongLimit=6;// after how many wrong messages will it disconect (both wrong time and uninteligable)
     static private Log ServerLog;
     static private Scanner Scann;
+    static private String CMDString;
+
     public static void main(String args[]) {
         Log.LOGSINIT();
         ServerLog = new Log("Server");//starts servers log
@@ -19,12 +22,20 @@ public class Server {
         ClientConnectionService CCS = new ClientConnectionService(Port, ThreadMax,ServerLog);
         CCS.start();
         try {
-            System.out.println("~Server is waiting to accept user...");
             ServerLog.WriteLog("INIT COMPLEAT");
             while(true){
-                if(Scann.nextLine().equals("END")){
+                CMDString=Scann.nextLine();
+                if(CMDString.equals("END")){
                     ServerLog.WriteLog("END COMMAND GIVEN");
                     break;
+                }else if(CMDString.equals("CREATE ACCOUNT")){
+                    CreateAccount();
+                    System.out.println("~Account created");
+                }else if(CMDString.equals("WIPE ACCOUNTS")){
+                    WipeAccounts();
+                    System.out.println("~Accounts wiped");
+                }else{
+                    System.out.println("~Did not understand command reference README");
                 }
             }
         } catch (Exception e) {
@@ -40,4 +51,21 @@ public class Server {
         System.out.println("~Sever stopped!");
         ServerLog.TerminateLog();
     }
+    static void CreateAccount(){
+        System.out.println("Write email:");
+        String Email = Scann.nextLine();
+        System.out.println("Password:");
+        String Password = Scann.nextLine();
+        Accounts.CreateAccount(Email, Password);
+        ServerLog.WriteLog("ACCOUNT CREATED: "+Email);
+    }
+    static void WipeAccounts(){
+        System.out.println("ARE YOU SURE FRFR say 'YES' to confirm");
+        if(Scann.nextLine().equals("YES")){
+            Accounts.WipeData();
+            ServerLog.WriteLog("ACCOUNTS WIPED");
+        }
+        
+    }
+
 }

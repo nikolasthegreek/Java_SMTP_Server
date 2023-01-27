@@ -12,12 +12,12 @@ public class ServerInterfaceThread extends Thread {
     private Encryption ServerEncyption;
     private String MessageIN;
     private String MessageOUT;
+    private Account User;
 
     private int WrongMessageCounter=0;
     private int MessageCheckCounter=0;
     private int MessageChecksMax;
     private int AttemtCounter=0;
-    private boolean AttemtReSend=false;
 
     //timeout setings check server
     private int TimeoutAttemts;
@@ -30,11 +30,79 @@ public class ServerInterfaceThread extends Thread {
         ServerEncyption = new Encryption();
         SITLog.WriteLog("SIT INIT SUCCESSFUL");
         ServerExchangeKeys();
-        SITLog.WriteLog("HEY EXCHANGE SUCCESFUL");
+        SITLog.WriteLog("KEY EXCHANGE SUCCESFUL");
+        User=LogIn();
+        MessageOUT=SMTPCode.C220("SERVER");
+        MessageEncriptedSend(MessageOUT);
+        
+        while(true){// main loop for reacting to SMTP commands
+            try{
+                while(WaitForMessage()){};
+                SMTPMessage SMTPMSG= new SMTPMessage(ReadEncrypted());
+                if(SMTPMSG.Type.equals("HELO")){
+                    MessageOUT=SMTPCode.C250();
+                        SITLog.WriteLog("RECIEVED HELLO");
+                }else if(SMTPMSG.Type.equals("QUIT")){
+                    MessageOUT =SMTPCode.C221("Service closing transmission channel");
+                    MessageEncriptedSend(MessageOUT);//sends out the reply to quit
+                    SITLog.WriteLog("RECIEVED QUIT COMMAND");
+                    break;
+                }else if(SMTPMSG.Type.equals("NOOP")){
+                    MessageOUT =SMTPCode.C250();
+                }
+                MessageEncriptedSend(MessageOUT);//sends out the reply
+
+
+            }catch(Exception e){
+                System.err.println("&Error in main SIT loop");
+                SITLog.WriteLog("EXEPTION I MAIN SIT LOOP");
+                break;
+            }
+        }
+
 
 
         Exit();
     }
+
+    private Account LogIn(){
+        Account Acc;
+        while(true){//geting the email/username stage
+            while(WaitForMessage()){}
+            MessageIN= ReadEncrypted();
+            if(MessageIN.equals("EXIT")){
+                SITLog.WriteLog("FAILED LOGIN NO USERNAME");
+                return null;
+            }
+            Acc=Accounts.FindUser(MessageIN);
+            if(Acc!=null){
+                break;
+            }
+            MessageOUT="WRONGEMAIL";
+        MessageEncriptedSend(MessageOUT);
+        }
+        MessageOUT="GOODEMAIL";
+        MessageEncriptedSend(MessageOUT);
+        int count =3;
+        while(count>0){//pasword login with attemts
+            count--;
+            while(WaitForMessage()){}
+            MessageIN= ReadEncrypted();
+            if(Acc.CheckPassword(MessageIN)){
+                SITLog.WriteLog("SUCCESSFUL LOGIN: "+Acc.Email);
+                MessageOUT="SUCCESSFUL LOGIN";
+                MessageEncriptedSend(MessageOUT);
+                return Acc;
+            }
+            MessageOUT="PASSWORDWRONG";
+            MessageEncriptedSend(MessageOUT);
+        }
+        MessageOUT="PASSWORDFAIL";
+        MessageEncriptedSend(MessageOUT);
+        SITLog.WriteLog("FAILED LOGIN WRONG PASSWORD");
+        return null;
+    }
+
 
     public ServerInterfaceThread(Socket _socket,BufferedReader _BufRead,BufferedWriter _BufWrite ,ClientConnectionService _ccs){
         // takes the conection
@@ -42,8 +110,7 @@ public class ServerInterfaceThread extends Thread {
         BR=_BufRead;
         BW=_BufWrite;
         CCS=_ccs;
-    }
-    
+    }  
     private void FechConfig(){//copies setings from server, this is done so all the server setings are in one spot
         TimeoutAttemts=Server.TimeoutAttemts;
         TimeoutAttemtsInterval=Server.TimeoutAttemtsInterval;
@@ -62,6 +129,7 @@ public class ServerInterfaceThread extends Thread {
         try{
             //waits for client to start the interaction
             while(WaitForMessage()){
+                MessageSend(MessageOUT);
                 AttemtCounter++;
                 if(AttemtCounter>TimeoutAttemts){
                     TerminateConnection();
@@ -80,7 +148,7 @@ public class ServerInterfaceThread extends Thread {
                 }
                 while(WaitForMessage()){
                     AttemtCounter++;
-                    
+                    MessageSend(MessageOUT);
                     if(AttemtCounter>TimeoutAttemts){
                         System.err.println("&connection timmed out invalid communication");
                         TerminateConnection();
@@ -94,6 +162,7 @@ public class ServerInterfaceThread extends Thread {
             MessageOUT="HELLO";
             MessageSend(MessageOUT);
             while(WaitForMessage()){
+                MessageSend(MessageOUT);
                 AttemtCounter++;
                 if(AttemtCounter>TimeoutAttemts){
                     TerminateConnection();
@@ -139,7 +208,6 @@ public class ServerInterfaceThread extends Thread {
                 AttemtCounter=0;
                 MessageIN=ReadEncrypted();
             }
-            System.err.println("~Transfer compleat");
             MessageOUT="DONE";
             MessageEncriptedSend(MessageOUT);
             //keys have been exchanged
