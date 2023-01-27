@@ -4,7 +4,7 @@ public class SMTPCode {
         return "211"+Status;
     }
     public static String C214(String Help){
-        return "211"+Help;
+        return "214Help message"+Help;
     }
     public static String C220(String Domain){
         return "220"+ Domain+"Service ready";

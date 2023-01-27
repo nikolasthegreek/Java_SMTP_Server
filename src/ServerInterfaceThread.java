@@ -13,6 +13,7 @@ public class ServerInterfaceThread extends Thread {
     private String MessageIN;
     private String MessageOUT;
     private Account User;
+    private String Mail="";//temprary storage for incoming mail
 
     private int WrongMessageCounter=0;
     private int MessageCheckCounter=0;
@@ -38,24 +39,128 @@ public class ServerInterfaceThread extends Thread {
         while(true){// main loop for reacting to SMTP commands
             try{
                 while(WaitForMessage()){};
-                SMTPMessage SMTPMSG= new SMTPMessage(ReadEncrypted());
-                if(SMTPMSG.Type.equals("HELO")){
+                MessageIN= ReadEncrypted();
+                System.out.println(MessageIN);
+                SMTPMessage SMTPMSG= new SMTPMessage(MessageIN);
+                //if statement to determine reply
+                if(SMTPMSG.Type.equals("HELO")){//NOOP reply
                     MessageOUT=SMTPCode.C250();
-                        SITLog.WriteLog("RECIEVED HELLO");
+                    MessageEncriptedSend(MessageOUT);
+                    SITLog.WriteLog("RECIEVED HELLO");
                 }else if(SMTPMSG.Type.equals("QUIT")){
                     MessageOUT =SMTPCode.C221("Service closing transmission channel");
                     MessageEncriptedSend(MessageOUT);//sends out the reply to quit
                     SITLog.WriteLog("RECIEVED QUIT COMMAND");
                     break;
-                }else if(SMTPMSG.Type.equals("NOOP")){
+                }else if(SMTPMSG.Type.equals("NOOP")){//NOOP reply
                     MessageOUT =SMTPCode.C250();
+                    MessageEncriptedSend(MessageOUT);
+                }else if(SMTPMSG.Type.equals("HELP")){//Help reply
+                    MessageOUT =SMTPCode.C214("Bla bla bla I am helping you know");
+                    MessageEncriptedSend(MessageOUT);
+                }else if(SMTPMSG.Type.equals("MAIL")){//MAIL INTERACTION
+                    String Sender = SMTPMSG.ParseData();
+                    System.out.println(Sender);//test---------------------------------------------------
+                    if(Sender.equals(User.Email)){//checks if it is the user
+                        MessageOUT =SMTPCode.C250();
+                        MessageEncriptedSend(MessageOUT);
+
+                        try {Thread.sleep(100);} catch (Exception e) {}//to avoid race horse condition
+                        while(WaitForMessage()){};//waits for RCPT command
+                        MessageIN= ReadEncrypted();
+                        System.out.println(MessageIN);
+                        SMTPMSG= new SMTPMessage(MessageIN);
+                        if(SMTPMSG.Type.equals("RCPT")){
+
+                            String Reciver =SMTPMSG.ParseData();
+                            System.out.println(Reciver);//test--------------------------------------
+                            
+                            if(Accounts.FindUser(Reciver)!=null){//checks if user exists
+                                System.out.println("passed");
+                                MessageOUT =SMTPCode.C250();
+                                MessageEncriptedSend(MessageOUT);
+
+                                try {Thread.sleep(100);} catch (Exception e) {}//to avoid race horse condition
+                                while(WaitForMessage()){};//waits for DATA command
+                                MessageIN= ReadEncrypted();
+                                System.out.println(MessageIN);
+                                SMTPMSG= new SMTPMessage(MessageIN);
+                                if(SMTPMSG.Type.equals("DATA")){
+                                    MessageOUT =SMTPCode.C354();//start sending data code
+                                    MessageEncriptedSend(MessageOUT);
+
+                                    while(true){//checks if it is the . command
+                                        try {Thread.sleep(1000);} catch (Exception e) {}//to avoid race horse condition
+                                        WaitMail();
+                                        System.out.println(MessageIN);
+                                        if(MessageIN==null){continue;}
+                                        if(MessageIN.equals("RSET")){//for case of RSET
+                                            MessageOUT =SMTPCode.C250();
+                                            MessageEncriptedSend(MessageOUT);
+                                            break;//stops and does not save
+                                        }else if(MessageIN.equals(".")){//reacts to end of transmition
+                                            MessageOUT =SMTPCode.C250();
+                                            MessageEncriptedSend(MessageOUT);
+                                            //saves mail
+                                            Server.Mailusers.add(Sender);
+                                            Server.MailRCPT.add(Reciver);
+                                            Server.Mail.add(Mail);
+                                            Mail="";
+                                            break;
+                                        }
+                                        Mail = Mail + '\n' + MessageIN;
+                                    }
+
+
+
+
+                                }else if(SMTPMSG.Type.equals("RSET")){//checks for RSET command
+                                    MessageOUT =SMTPCode.C250();
+                                    MessageEncriptedSend(MessageOUT);
+                                }else if(SMTPMSG.IsValid()){//if it is a valid command but not what was expected
+                                    MessageOUT =SMTPCode.EC503();//incorect squence command
+                                    MessageEncriptedSend(MessageOUT);
+                                }else{//command not valid
+                                    MessageOUT =SMTPCode.EC500();//command not recognized code
+                                    MessageEncriptedSend(MessageOUT);
+                                }
+
+                            }else{
+                                MessageOUT =SMTPCode.EC551("IDK");//user is uknow(not in accounts)
+                                MessageEncriptedSend(MessageOUT);
+                            }
+
+                        }else if(SMTPMSG.Type.equals("RSET")){//checks for RSET command
+                            MessageOUT =SMTPCode.C250();
+                            MessageEncriptedSend(MessageOUT);
+                        }else if(SMTPMSG.IsValid()){//if it is a valid command but not what was expected
+                            MessageOUT =SMTPCode.EC503();//incorect squence command
+                            MessageEncriptedSend(MessageOUT);
+                        }else{//command not valid
+                            MessageOUT =SMTPCode.EC500();//command not recognized code
+                            MessageEncriptedSend(MessageOUT);
+                        }
+
+                    }else{
+                        MessageOUT =SMTPCode.EC451();//abort code
+                        MessageEncriptedSend(MessageOUT);
+                    }
+                }else if(SMTPMSG.Type.equals("RSET")){//checks for RSET command
+                    MessageOUT =SMTPCode.C250();
+                MessageEncriptedSend(MessageOUT);
+                }else if(SMTPMSG.IsValid()){//if it is a valid command but not what was expected
+                    MessageOUT =SMTPCode.EC503();//incorect squence command
+                    MessageEncriptedSend(MessageOUT);
+                }else{//command not valid
+                    MessageOUT =SMTPCode.EC500();//command not recognized code
+                    MessageEncriptedSend(MessageOUT);
                 }
-                MessageEncriptedSend(MessageOUT);//sends out the reply
 
 
             }catch(Exception e){
                 System.err.println("&Error in main SIT loop");
                 SITLog.WriteLog("EXEPTION I MAIN SIT LOOP");
+                e.printStackTrace();
                 break;
             }
         }
@@ -238,7 +343,21 @@ public class ServerInterfaceThread extends Thread {
         }
         return false;
     }
-    
+    private void WaitMail(){
+        while(true){
+            while(WaitForMessage()){}
+            try{
+                MessageIN=BR.readLine();
+            }catch(IOException e){
+                System.err.println("mail fuckup");
+            }
+            
+            if(MessageIN!=null){
+                MessageIN= Encryption.DeCrypt(MessageIN);
+            }
+        }
+
+    }
     private void MessageSend(String Message){
         try{
             BW.write(Message);

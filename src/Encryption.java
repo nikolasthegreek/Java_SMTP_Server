@@ -55,6 +55,9 @@ public class Encryption {
     }
     
     public static String DeCrypt(String MessageSTR) {
+        if(MessageSTR.equals(".")){//for some reason the dot never gets properly hexed
+            return ".";
+        }
         try{
             byte[] MessageBEncrypted = Bytehex.decodeHexString(MessageSTR);//turn string to bytes
             byte[] MessageBDecrypted = DecryptCipher.doFinal(MessageBEncrypted);//decypher
@@ -62,6 +65,7 @@ public class Encryption {
             return Message;
         }catch(Exception e){
             System.out.println("&failed decrypt : "+e);
+            e.printStackTrace();
             return null;
         }
     }

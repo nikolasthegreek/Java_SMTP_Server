@@ -84,6 +84,15 @@ public class Accounts {
         }
         return null;// null means it failed to find an account
     }
+    public static boolean FindUserBool (String _email){
+        for (int i = 0; i < _accounts.size(); i++) {
+            if(_accounts.get(i).Email.equals(_email)){
+                System.out.println("found user");
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static boolean CreateAccount(String email, String Password){
         if(FindUser(email)!=null){return false;}//this returns false to denote the account exists

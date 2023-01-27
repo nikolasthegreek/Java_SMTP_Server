@@ -24,4 +24,24 @@ public class SMTPMessage {
         }
         return false;
     }
+    public String ParseData(){//used to take the form and to path
+        int i;
+        boolean DataFound=false;
+        for (i = 0; i < Message.length(); i++) {
+            if(Message.charAt(i)==':'){
+                DataFound=true;
+                break;
+            }
+        }
+        if(!DataFound){
+            return null;
+        }
+        char[] Chars= new char[Message.length()-i-1];
+        int ind=0;//index for Chars
+        for (int j = i+1; j < Message.length(); j++) {//start loop after :
+            Chars[ind]=Message.charAt(j);
+            ind++;
+        }
+        return new String(Chars);
+    }
 }

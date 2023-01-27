@@ -6,8 +6,15 @@ public class Bytehex {
         return new String(hexDigits);
     }
     static private byte hexToByte(String hexString) {
-        int firstDigit = toDigit(hexString.charAt(0));
-        int secondDigit = toDigit(hexString.charAt(1));
+        int secondDigit=0;
+        int firstDigit=0 ;
+        try{
+            firstDigit = toDigit(hexString.charAt(0));
+            secondDigit = toDigit(hexString.charAt(1));
+        }catch(IllegalArgumentException e){
+            
+        }
+        
         return (byte) ((firstDigit << 4) + secondDigit);
     }
     
@@ -33,7 +40,7 @@ public class Bytehex {
     static public byte[] decodeHexString(String hexString) {
         if (hexString.length() % 2 == 1) {
             throw new IllegalArgumentException(
-              "Invalid hexadecimal String supplied.");
+              "Invalid hexadecimal String supplied."+hexString.length());
         }
         
         byte[] bytes = new byte[hexString.length() / 2];

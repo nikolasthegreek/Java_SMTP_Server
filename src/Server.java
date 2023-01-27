@@ -1,3 +1,4 @@
+import java.util.LinkedList;
 import java.util.Scanner;
 
 public class Server {
@@ -11,6 +12,11 @@ public class Server {
     static private Log ServerLog;
     static private Scanner Scann;
     static private String CMDString;
+
+    // all of the data in the linked lists are stored paralele (storage is volatile)
+    static public LinkedList<String> Mailusers;//stores the sender email
+    static public LinkedList<String> MailRCPT;//stores the recipient email
+    static public LinkedList<String> Mail;//contains the mail content
 
     public static void main(String args[]) {
         Log.LOGSINIT();
